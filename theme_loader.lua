@@ -13,10 +13,18 @@ end
 if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\themes") then
     filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\themes")
 end
+if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\headers") then
+    filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\headers")
+end
 
 local themelist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
 menu.action(themelist, "Open Folder", {}, "", function()
     util.open_folder(filesystem.resources_dir().."\\theme_loader\\themes")
+end)
+
+local headerlist = menu.list(menu.my_root(), "Headers", {"headerlist"}, "", function(); end)
+menu.action(headerlist, "Open Folder", {}, "", function()
+    util.open_folder(filesystem.resources_dir().."\\theme_loader\\headers")
 end)
 
 local theme_data = {
@@ -211,6 +219,22 @@ local function WriteTheme(themename, object)
     file:write(content)
     file:close()
 end
+local function LoadHeader(folderpath)
+    for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\Headers\\Custom Header")) do
+        os.remove(path)
+    end
+    for _, path in ipairs(filesystem.list_files(folderpath)) do
+        local headername = path:gsub(folderpath, "")
+        local file = io.open(path, "rb")
+        local file2 = io.open(filesystem.stand_dir().."\\Headers\\Custom Header\\"..headername, "wb")
+        file2:write(file:read("*all"))
+        file:close()
+        file2:close()
+    end
+    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 15)
+    util.yield(100)
+    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 200)
+end
 
 menu.action(menu.my_root(), "Load Theme", {"themeload"}, "", function() menu.show_command_box("themeload ") end, function(themename)
 	SetData(soup.json.decode(ReadTheme(themename)))
@@ -236,5 +260,19 @@ for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme
             break
         end
         menu.trigger_commands("themelist")
+    end)
+end
+for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\headers")) do
+    local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\headers\\", "")
+    menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+        switch index do
+            case 1:
+                LoadHeader(path)
+            break
+            case 3:
+                os.remove(path)
+            break
+        end
+        menu.trigger_commands("headerlist")
     end)
 end
