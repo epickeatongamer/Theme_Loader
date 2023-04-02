@@ -6,12 +6,18 @@
 
 util.ensure_package_is_installed('lua/inspect')
 local inspect = require("inspect")
+
 if not filesystem.exists(filesystem.resources_dir().."\\theme_loader") then
     filesystem.mkdir(filesystem.resources_dir().."\\theme_loader")
 end
 if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\themes") then
     filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\themes")
 end
+
+local themelist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
+menu.action(themelist, "Open Folder", {}, "", function()
+    util.open_folder(filesystem.resources_dir().."\\theme_loader\\themes")
+end)
 
 local theme_data = {
     {path = "Stand>Settings>Appearance>Max Visible Commands", value = 0},
@@ -213,3 +219,22 @@ menu.action(menu.my_root(), "Save Theme", {"themesave"}, "", function() menu.sho
     CopyData(theme_data)
 	WriteTheme(themename, theme_data)
 end)
+
+for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
+    local themename = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
+    menu.list_action(themelist, themename, {}, "", {"Load", "Overwrite", "Delete"}, function(index, value, click_type)
+        switch index do
+            case 1:
+                SetData(soup.json.decode(ReadTheme(themename:gsub(".json", ""))))
+            break
+            case 2:
+                CopyData(theme_data)
+                WriteTheme(themename:gsub(".json", ""), theme_data)
+            break
+            case 3:
+                os.remove(path)
+            break
+        end
+        menu.trigger_commands("themelist")
+    end)
+end
