@@ -252,7 +252,7 @@ menu.action(menu.my_root(), "Save Theme", {"themesave"}, "", function() menu.sho
 end)
 
 
-local headerlist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
+local themelist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
 
 local function GenerateThemes(search, content)
     search = search or false
@@ -261,7 +261,7 @@ local function GenerateThemes(search, content)
         for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
             local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
             if string.find(headername:lower(), content:lower()) then
-                tableoptions[#tableoptions + 1] = menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+                tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
                     switch index do
                         case 1:
                             LoadHeader(path)
@@ -282,7 +282,7 @@ local function GenerateThemes(search, content)
     else
         for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
             local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
-            tableoptions[#tableoptions + 1] = menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+            tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
                 switch index do
                     case 1:
                         LoadHeader(path)
@@ -302,22 +302,23 @@ local function GenerateThemes(search, content)
     end
 end
 
-menu.action(headerlist, "Open Folder", {}, "", function()
+menu.action(themelist, "Open Folder", {}, "", function()
     util.open_folder(filesystem.resources_dir().."\\theme_loader\\themes")
 end)
-menu.action(headerlist, "Refresh List", {}, "", function()
+menu.action(themelist, "Refresh List", {}, "", function()
     for index, commandRef in ipairs(tableoptions) do
         menu.delete(commandRef)
     end
     tableoptions = {}
     GenerateThemes()
 end)
-menu.action(headerlist, "Search", {"searchthemes"}, "", function() menu.show_command_box("searchthemes ") end, function(input)
+menu.action(themelist, "Search", {"searchthemes"}, "", function() menu.show_command_box("searchthemes ") end, function(input)
     for index, commandRef in ipairs(tableoptions) do
         menu.delete(commandRef)
     end
     tableoptions = {}
     GenerateThemes(true, input)
 end)
+menu.divider(themelist, "Themes")
 
 GenerateThemes()
