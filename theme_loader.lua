@@ -6,6 +6,7 @@
 
 util.ensure_package_is_installed('lua/inspect')
 local inspect = require("inspect")
+local tableoptions = {}
 
 if not filesystem.exists(filesystem.resources_dir().."\\theme_loader") then
     filesystem.mkdir(filesystem.resources_dir().."\\theme_loader")
@@ -13,19 +14,6 @@ end
 if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\themes") then
     filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\themes")
 end
-if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\headers") then
-    filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\headers")
-end
-
-local themelist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
-menu.action(themelist, "Open Folder", {}, "", function()
-    util.open_folder(filesystem.resources_dir().."\\theme_loader\\themes")
-end)
-
-local headerlist = menu.list(menu.my_root(), "Headers", {"headerlist"}, "", function(); end)
-menu.action(headerlist, "Open Folder", {}, "", function()
-    util.open_folder(filesystem.resources_dir().."\\theme_loader\\headers")
-end)
 
 local theme_data = {
     {path = "Stand>Settings>Appearance>Max Visible Commands", value = 0},
@@ -87,6 +75,10 @@ local theme_data = {
     {path = "Stand>Settings>Appearance>Position>X", value = 0},
     {path = "Stand>Settings>Appearance>Position>Y", value = 0},
     {path = "Stand>Settings>Appearance>Position>Move With Mouse", value = false},
+    {path = "Stand>Settings>Appearance>Header>Header", value = 0},
+    {path = "Stand>Settings>Appearance>Header>Frame Interval", value = 0},
+    {path = "Stand>Settings>Appearance>Header>Background Blur", value = false},
+    {path = "Stand>Settings>Appearance>Header>Legacy Positioning", value = false},
     {path = "Stand>Settings>Appearance>Max Visible Commands", value = 0},
     {path = "Stand>Settings>Appearance>List Width", value = 0},
     {path = "Stand>Settings>Appearance>List Height", value = 0},
@@ -188,7 +180,7 @@ local function SetData(data_table)
     end
 end
 local function ReadTheme(themename)
-    local filepath = filesystem.resources_dir().."\\theme_loader\\themes\\"..themename..".json"
+    local filepath = filesystem.resources_dir().."\\theme_loader\\themes\\"..themename.."\\"..themename..".json"
     local file, err = io.open(filepath, "r")
     if file then
         local status, data = pcall(function() return file:read("*a") end)
@@ -203,7 +195,7 @@ local function ReadTheme(themename)
     end
 end
 local function WriteTheme(themename, object)
-    local filepath = filesystem.resources_dir().."\\theme_loader\\themes\\"..themename..".json"
+    local filepath = filesystem.resources_dir().."\\theme_loader\\themes\\"..themename.."\\"..themename..".json"
     local encode_status, content = pcall(soup.json.encode, object)
     if not encode_status then
         util.toast("Error encoding object: "..content)
@@ -220,59 +212,112 @@ local function WriteTheme(themename, object)
     file:close()
 end
 local function LoadHeader(folderpath)
-    for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\Headers\\Custom Header")) do
+    for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\headers\\Custom Header")) do
         os.remove(path)
     end
     for _, path in ipairs(filesystem.list_files(folderpath)) do
-        local headername = path:gsub(folderpath, "")
-        local file = io.open(path, "rb")
-        local file2 = io.open(filesystem.stand_dir().."\\Headers\\Custom Header\\"..headername, "wb")
-        file2:write(file:read("*all"))
-        file:close()
-        file2:close()
+        local tmp_name = path:gsub(folderpath, "")
+        if not path:contains(".json") then
+            local file = io.open(path, "rb") --old
+            local file2 = io.open(filesystem.stand_dir().."\\headers\\Custom Header\\"..tmp_name, "wb") --new
+            file2:write(file:read("*all"))
+            file:close()
+            file2:close()
+        else
+            --util.toast(tmp_name:gsub("\\", ""):gsub(".json", ""))
+            SetData(soup.json.decode(ReadTheme(tmp_name:gsub("\\", ""):gsub(".json", ""))))
+        end
     end
     menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 15)
     util.yield(100)
     menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 200)
 end
-
-menu.action(menu.my_root(), "Load Theme", {"themeload"}, "", function() menu.show_command_box("themeload ") end, function(themename)
-	SetData(soup.json.decode(ReadTheme(themename)))
-end)
+local function CopyHeader(themename)
+    for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\headers\\Custom Header")) do
+        local headername = path:gsub(filesystem.stand_dir().."\\headers\\Custom Header", "")
+        local file = io.open(path, "rb") --old
+        local file2 = io.open(filesystem.resources_dir().."\\theme_loader\\themes\\"..themename.."\\"..headername, "wb") --new
+        file2:write(file:read("*all"))
+        file:close()
+        file2:close()
+    end
+end
 menu.action(menu.my_root(), "Save Theme", {"themesave"}, "", function() menu.show_command_box("themesave ") end, function(themename)
+    if not filesystem.exists(filesystem.resources_dir().."\\theme_loader\\themes\\"..themename) then
+        filesystem.mkdir(filesystem.resources_dir().."\\theme_loader\\themes\\"..themename)
+    end
     CopyData(theme_data)
+    CopyHeader(themename)
 	WriteTheme(themename, theme_data)
 end)
 
-for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
-    local themename = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
-    menu.list_action(themelist, themename, {}, "", {"Load", "Overwrite", "Delete"}, function(index, value, click_type)
-        switch index do
-            case 1:
-                SetData(soup.json.decode(ReadTheme(themename:gsub(".json", ""))))
-            break
-            case 2:
-                CopyData(theme_data)
-                WriteTheme(themename:gsub(".json", ""), theme_data)
-            break
-            case 3:
-                os.remove(path)
-            break
+
+local headerlist = menu.list(menu.my_root(), "Themes", {"themelist"}, "", function(); end)
+
+local function GenerateThemes(search, content)
+    search = search or false
+    content = content or ""
+    if search then
+        for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
+            local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
+            if string.find(headername:lower(), content:lower()) then
+                tableoptions[#tableoptions + 1] = menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+                    switch index do
+                        case 1:
+                            LoadHeader(path)
+                        break
+                        case 2:
+                            CopyData(theme_data)
+                            WriteTheme(headername:gsub(".json", ""), theme_data)
+                        break
+                        case 3:
+                            os.remove(path)
+                            menu.delete()
+                        break
+                    end
+                    menu.trigger_commands("themelist")
+                end)
+            end
         end
-        menu.trigger_commands("themelist")
-    end)
-end
-for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\headers")) do
-    local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\headers\\", "")
-    menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
-        switch index do
-            case 1:
-                LoadHeader(path)
-            break
-            case 3:
-                os.remove(path)
-            break
+    else
+        for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
+            local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
+            tableoptions[#tableoptions + 1] = menu.list_action(headerlist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+                switch index do
+                    case 1:
+                        LoadHeader(path)
+                    break
+                    case 2:
+                        CopyData(theme_data)
+                        WriteTheme(headername:gsub(".json", ""), theme_data)
+                    break
+                    case 3:
+                        os.remove(path)
+                        menu.delete()
+                    break
+                end
+                menu.trigger_commands("themelist")
+            end)
         end
-        menu.trigger_commands("headerlist")
-    end)
+    end
 end
+
+menu.action(headerlist, "Open Folder", {}, "", function()
+    util.open_folder(filesystem.resources_dir().."\\theme_loader\\themes")
+end)
+menu.action(headerlist, "Refresh List", {}, "", function()
+    for index, commandRef in ipairs(tableoptions) do
+        menu.delete(commandRef)
+    end
+    tableoptions = {}
+    GenerateThemes()
+end)
+menu.action(headerlist, "Search", {"searchthemes"}, "", function() menu.show_command_box("searchthemes ") end, function(input)
+    for index, commandRef in ipairs(tableoptions) do
+        menu.delete(commandRef)
+    end
+    tableoptions = {}
+    GenerateThemes(true, input)
+end)
+
+GenerateThemes()
