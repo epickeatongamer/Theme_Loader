@@ -215,6 +215,9 @@ local function LoadHeader(folderpath)
     for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\headers\\Custom Header")) do
         os.remove(path)
     end
+    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 15)
+    util.yield(100)
+    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 200)
     for _, path in ipairs(filesystem.list_files(folderpath)) do
         local tmp_name = path:gsub(folderpath, "")
         if not path:contains(".json") then
@@ -228,9 +231,6 @@ local function LoadHeader(folderpath)
             SetData(soup.json.decode(ReadTheme(tmp_name:gsub("\\", ""):gsub(".json", ""))))
         end
     end
-    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 15)
-    util.yield(100)
-    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 200)
 end
 local function CopyHeader(themename)
     for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\headers\\Custom Header")) do
@@ -261,7 +261,7 @@ local function GenerateThemes(search, content)
         for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
             local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
             if string.find(headername:lower(), content:lower()) then
-                tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+                tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Update", "Delete"}, function(index, value, click_type)
                     switch index do
                         case 1:
                             LoadHeader(path)
@@ -282,7 +282,7 @@ local function GenerateThemes(search, content)
     else
         for _, path in ipairs(filesystem.list_files(filesystem.resources_dir().."\\theme_loader\\themes")) do
             local headername = path:gsub(filesystem.resources_dir().."\\theme_loader\\themes\\", "")
-            tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Delete"}, function(index, value, click_type)
+            tableoptions[#tableoptions + 1] = menu.list_action(themelist, headername, {}, "", {"Load", "Update", "Delete"}, function(index, value, click_type)
                 switch index do
                     case 1:
                         LoadHeader(path)
