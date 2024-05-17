@@ -293,7 +293,6 @@ local function GenerateThemes(search, content)
                     break
                     case 3:
                         os.remove(path)
-                        menu.delete()
                     break
                 end
                 menu.trigger_commands("themelist")
