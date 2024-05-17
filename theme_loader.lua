@@ -215,9 +215,9 @@ local function LoadHeader(folderpath)
     for _, path in ipairs(filesystem.list_files(filesystem.stand_dir().."\\headers\\Custom Header")) do
         os.remove(path)
     end
+    util.yield(100)
     menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 15)
     util.yield(100)
-    menu.set_value(menu.ref_by_path("Stand>Settings>Appearance>Header>Header"), 200)
     for _, path in ipairs(filesystem.list_files(folderpath)) do
         local tmp_name = path:gsub(folderpath, "")
         if not path:contains(".json") then
