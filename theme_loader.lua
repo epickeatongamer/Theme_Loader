@@ -173,7 +173,9 @@ local function CopyData(data_table)
 end
 local function SetData(data_table)
 	for index, _ in ipairs(data_table) do
-        data_table[index].value = menu.set_value(menu.ref_by_path(data_table[index].path), data_table[index].value)
+        if menu.is_ref_valid(Cmenu.ref_by_path(data_table[index].path)) then
+            data_table[index].value = menu.set_value(menu.ref_by_path(data_table[index].path), data_table[index].value)
+        end
     end
 end
 local function ReadTheme(themename)
